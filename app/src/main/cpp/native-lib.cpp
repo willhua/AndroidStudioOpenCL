@@ -276,8 +276,30 @@ void mycl()
         outdata[get_group_id(0)] = tmp[0];
     }
 })";
-    const size_t SIZE = 1 << 20;
 
+    const char *src2 = R"(
+__kernel void reduction_scalar(__global float* data,
+      __local float* partial_sums, __global float* output) {
+
+   int lid = get_local_id(0);
+   int group_size = get_local_size(0);
+
+   partial_sums[lid] = data[get_global_id(0)];
+   barrier(CLK_LOCAL_MEM_FENCE);
+
+   for(int i = group_size/2; i>0; i >>= 1) {
+      if(lid < i) {
+         partial_sums[lid] += partial_sums[lid + i];
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
+   }
+
+   if(lid == 0) {
+      output[get_group_id(0)] = partial_sums[0];
+   }
+}
+)";
+    const size_t SIZE = 1 << 20;
 
 
     int err = 0;
@@ -288,9 +310,9 @@ void mycl()
     LOGD("LOCALSIZE work group:%d", localSize);
     int groupCnt = SIZE / localSize;
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
-    cl_program program = buildProgram(context, device, src1, strlen(src1));
+    cl_program program = buildProgram(context, device, src2, strlen(src2));
     //cl_program program = buildProgramFromFile(context, device, "CLKernels.cl");
-    cl_command_queue cmdqueue = clCreateCommandQueue(context, device, NULL, &err);
+    cl_command_queue cmdqueue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
 
 
     float *data = (float*)malloc(sizeof(float) * SIZE);
@@ -298,17 +320,17 @@ void mycl()
         data[i] = 1.0 * i;
     }
     float *tmpdata = (float*)malloc(sizeof(float) * groupCnt);
-
+    for(int i = 0; i < groupCnt; ++i){ tmpdata[i] = 0.0; }
     cl_mem inbuffer, sumbuffer, tmpbuffer;
     //注意使用CL_MEM_USE_HOST_PTR
-    inbuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, SIZE * sizeof(float), data, &err);
-    tmpbuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR , sizeof(float) * localSize, tmpdata, &err);
+    inbuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, SIZE * sizeof(float), data, &err);
+    tmpbuffer = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR , sizeof(float) * groupCnt, tmpdata, &err);
     //sumbuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(float), NULL, &err);
 
-    cl_kernel kernel1 = clCreateKernel(program, "reduce", &err);
+    cl_kernel kernel1 = clCreateKernel(program, "reduction_scalar", &err);
     err = clSetKernelArg(kernel1, 0, sizeof(cl_mem), &inbuffer);
-    err = clSetKernelArg(kernel1, 1, sizeof(cl_mem), &tmpbuffer);
-    err = clSetKernelArg(kernel1, 2, sizeof(float) * localSize, NULL);
+    err = clSetKernelArg(kernel1, 1, sizeof(float) * localSize, NULL);
+    err = clSetKernelArg(kernel1, 2, sizeof(cl_mem), &tmpbuffer);
     err = clEnqueueNDRangeKernel(cmdqueue, kernel1, 1, NULL, &SIZE, &localSize, 0, NULL, NULL);
 
     clFinish(cmdqueue);
