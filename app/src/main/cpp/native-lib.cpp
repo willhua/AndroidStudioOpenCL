@@ -13,7 +13,8 @@
 #include<stdio.h>
 #include <cl.h>
 #include <string.h>
-#include "OpenCLUtils.h"
+#include "Utils/OpenCLUtils.h"
+#include "MapReduce/MapReduce.h"
 
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "LYH", __VA_ARGS__)
 
@@ -115,7 +116,8 @@ Java_willhua_androidstudioopencl_MainActivity_stringFromJNI(
         jobject /* this */) {
     LOGD("test start");
     //test();
-    mycl();
+    //mycl();
+    mapReduceByOCL();
     LOGD("test end");
     std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());

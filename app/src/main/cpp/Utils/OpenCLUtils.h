@@ -9,9 +9,12 @@
 #include "LogUtils.h"
 
 cl_device_id createDevice(cl_device_type type);
+
 cl_program buildProgram(cl_context, cl_device_id, const char *, size_t);
+
 cl_program buildProgramFromFile(cl_context, cl_device_id, const char *);
 
+void checkCLError(cl_int error, const char * msg = nullptr);
 
 
 #endif //ANDROIDSTUDIOOPENCL_OPENCLUTILS_H

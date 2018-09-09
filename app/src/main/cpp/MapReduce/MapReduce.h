@@ -1,0 +1,11 @@
+//
+// Created by lisan on 2018/9/9.
+//
+
+#ifndef ANDROIDSTUDIOOPENCL_MAPREDUCE_H
+#define ANDROIDSTUDIOOPENCL_MAPREDUCE_H
+
+void mapReduceByOCL();
+
+
+#endif //ANDROIDSTUDIOOPENCL_MAPREDUCE_H
