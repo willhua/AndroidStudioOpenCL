@@ -14,6 +14,13 @@ const char * src = R"(
             int chars_per_item, __local int *local_result,
             __global int *global_result){
 
+    uint8 mask;
+    int16 a;
+    int8 b;
+    b = shuffle(a, mask);
+
+
+
     char16 text_vec, check_vec;
     local_result[0] = 0;
     local_result[1] = 0;
@@ -142,7 +149,7 @@ Get the secret book list here!
 )";
 
 
-
+//search for string by the algorithm of MapReduce from Google
 void mapReduceByOCL()
 {
     cl_int err = 0;
