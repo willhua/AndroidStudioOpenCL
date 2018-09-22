@@ -7,6 +7,10 @@ cmake_minimum_required(VERSION 3.4.1)
 
 
 
+set(OpenCV_DIR F:/opencv-3.2.0-android-sdk/OpenCV-android-sdk/sdk/native/jni)
+find_package(OpenCV REQUIRED)
+
+
 include_directories(${CMAKE_SOURCE_DIR}/src/main/cpp/include)
 add_library(libOpenCL SHARED IMPORTED )
 set_target_properties(libOpenCL PROPERTIES
@@ -52,4 +56,5 @@ target_link_libraries( # Specifies the target library.
 
                        # Links the target library to the log library
                        # included in the NDK.
-                       ${log-lib} )
+                       ${log-lib}
+                        ${OpenCV_LIBS})
