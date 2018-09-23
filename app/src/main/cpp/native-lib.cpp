@@ -16,8 +16,32 @@
 #include "Utils/OpenCLUtils.h"
 #include "MapReduce/MapReduce.h"
 
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgcodecs/imgcodecs_c.h>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+#include "ImageProcess/imageprocess.h"
+
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "LYH", __VA_ARGS__)
 
+
+AAssetManager *pAssetManager;
+cv::Mat readImage(const char *path , int mode = CV_LOAD_IMAGE_GRAYSCALE, AAssetManager *assetManager = nullptr){
+    LOGD("readimage %p   mode:%d", assetManager, mode);
+    if(assetManager == nullptr){
+        return cv::imread(path, mode);
+    }else{
+        AAsset *file = AAssetManager_open(assetManager, path, AASSET_MODE_BUFFER);
+        const char *data = (const char *)AAsset_getBuffer(file);
+        std::vector<char> vec(data, data + AAsset_getLength(file));
+        AAsset_close(file);
+        return cv::imdecode(vec, mode);
+    }
+}
 
 
 void mycl() {
@@ -109,7 +133,6 @@ __kernel void reduction_scalar(__global float* data,
 
 
 extern "C" JNIEXPORT jstring
-
 JNICALL
 Java_willhua_androidstudioopencl_MainActivity_stringFromJNI(
         JNIEnv *env,
@@ -117,8 +140,54 @@ Java_willhua_androidstudioopencl_MainActivity_stringFromJNI(
     LOGD("test start");
     //test();
     //mycl();
-    mapReduceByOCL();
+    //mapReduceByOCL();
+    if(true){
+        cv::Mat img = readImage("dir/cs.jpg", CV_LOAD_IMAGE_GRAYSCALE, pAssetManager);
+        int hist[256] = {0};
+        memset(hist, 0, sizeof(int)*256);
+        int hist2[256] = {0};
+        memset(hist2, 0, sizeof(int)*256);
+        double time = cv::getTickCount();
+        histogramTest(img.data, img.cols, img.rows, hist);
+        LOGD("cl time:%f", (1000.0 * (cv::getTickCount() - time) / cv::getTickFrequency()));
+
+        time = cv::getTickCount();
+        for(int i = 0; i < img.rows; ++i){
+            uchar *ptr = img.ptr<uchar>(i);
+            for(int j = 0; j < img.cols; ++j){
+                ++hist2[ptr[j]];
+            }
+        }
+        LOGD("cpu  time:%f", (1000.0 * (cv::getTickCount() - time) / cv::getTickFrequency()));
+        int wrong_cnt = 0;
+        for(int i = 0; i < 256; ++i){
+            if(hist[i] != hist2[i]){
+                LOGD("wrong  %d  diff:%d - %d = %d", i, hist[i], hist2[i], (hist[i] - hist2[i]));
+                ++wrong_cnt;
+                //break;
+            }
+        }
+        LOGD("compare wrong_cnt:%d", wrong_cnt);
+    /*
+        int channel[] = {0};
+        std::vector<int> histvec;
+        float histrange[]  = {0, 255};
+        int histsize = 256;
+        cv::MatND outhist;
+        cv::calcHist(&img, 1,  &channel, cv::Mat(), outhist, 1, &histsize,  &histrange, false, false); */
+
+
+    }
     LOGD("test end");
     std::string hello = "Hello from C++";
     return env->NewStringUTF(hello.c_str());
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_willhua_androidstudioopencl_MainActivity_setNativeAssetManager(JNIEnv *env, jobject instance,
+                                                                    jobject assetManager) {
+    pAssetManager = AAssetManager_fromJava(env, assetManager);
+    LOGD("setNativeAssetManager  %p", pAssetManager);
 }
