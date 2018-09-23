@@ -1,0 +1,10 @@
+//
+// Created by lisan on 2018/9/23.
+//
+
+#ifndef ANDROIDSTUDIOOPENCL_IMAGEPROCESS_H
+#define ANDROIDSTUDIOOPENCL_IMAGEPROCESS_H
+
+#include "histogram.h"
+
+#endif //ANDROIDSTUDIOOPENCL_IMAGEPROCESS_H
